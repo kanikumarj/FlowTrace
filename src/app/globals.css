@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 4.5%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 28% 14%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 28% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 28% 16%;
+    --input: 215 28% 16%;
+    --ring: 217 91% 53%;
+    --radius: 0.5rem;
+    --sidebar: 222 47% 5.5%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-border: 215 28% 12%;
+    --sidebar-accent: 217 91% 53%;
+    --sidebar-accent-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(222 47% 4.5%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(215 28% 20%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 28% 28%);
+}
+
+/* ─── Selection ────────────────────────────────────────────── */
+::selection {
+  background: hsl(217 91% 53% / 0.3);
+  color: white;
+}
+
+/* ─── Focus ring ───────────────────────────────────────────── */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* ─── Glass card ───────────────────────────────────────────── */
+.glass-card {
+  background: hsl(222 40% 7% / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(215 28% 16% / 0.5);
+}
+
+/* ─── Gradient text ────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 50%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Subtle glow ──────────────────────────────────────────── */
+.glow-blue {
+  box-shadow: 0 0 20px hsl(217 91% 53% / 0.15),
+              0 0 40px hsl(217 91% 53% / 0.05);
+}

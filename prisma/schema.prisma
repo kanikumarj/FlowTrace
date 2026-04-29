@@ -1,0 +1,410 @@
+// FlowTrace — Complete Database Schema (Phase 1-4)
+// PostgreSQL via Supabase or Railway
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── RBAC Roles ──────────────────────────────────────────────
+enum WorkspaceRole {
+  ADMIN     // Full access
+  ARCHITECT // Edit flows
+  QA        // Simulate + flag
+  ANALYST   // View + comment + export
+  AUDITOR   // Read-only + audit trail
+}
+
+// ─── Plan Tier ───────────────────────────────────────────────
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+enum UsageMetric {
+  FLOW_COUNT
+  USER_COUNT
+  SIMULATION_RUN
+  EXPORT
+  VERSION_COUNT
+}
+
+enum ExportFormat {
+  PDF
+  HTML
+  MARKDOWN
+  MERMAID
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+// ─── User ────────────────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?
+  image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  accounts         Account[]
+  sessions         Session[]
+  workspaces       Workspace[]        @relation("WorkspaceOwner")
+  memberships      WorkspaceMember[]
+  flows            Flow[]             @relation("FlowCreator")
+  importedVersions FlowVersion[]
+  simulationsRun   SimulationRun[]
+  exports          ExportRecord[]
+  sharedEmbeds     SharedEmbed[]
+  confluenceSyncs  ConfluenceSync[]
+}
+
+// ─── Workspace ───────────────────────────────────────────────
+model Workspace {
+  id                     String              @id @default(cuid())
+  name                   String
+  ownerId                String
+  plan                   Plan                @default(FREE)
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  subscriptionStatus     SubscriptionStatus?
+  planExpiresAt          DateTime?
+  confluenceAccessToken  String?             @db.Text
+  confluenceRefreshToken String?             @db.Text
+  confluenceSiteUrl      String?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  owner           User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members         WorkspaceMember[]
+  flows           Flow[]
+  usageRecords    UsageRecord[]
+  confluenceSyncs ConfluenceSync[]
+
+  @@index([ownerId])
+  @@index([stripeCustomerId])
+}
+
+// ─── Workspace Member (RBAC junction) ────────────────────────
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole @default(ANALYST)
+  joinedAt    DateTime      @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+// ─── Flow Platform ───────────────────────────────────────────
+enum FlowPlatform {
+  AMAZON_CONNECT
+  CISCO_UCCX
+  GENESYS
+}
+
+enum FlowStatus {
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum FlowNodeType {
+  MENU
+  PROMPT
+  TRANSFER
+  CONDITION
+  API_CALL
+  QUEUE
+  HANGUP
+  START
+  VOICEMAIL
+  UNKNOWN
+}
+
+// ─── Flow ────────────────────────────────────────────────────
+model Flow {
+  id             String       @id @default(cuid())
+  name           String
+  workspaceId    String
+  platform       FlowPlatform
+  rawFileUrl     String       @default("")
+  normalizedJson Json?
+  nodeCount      Int          @default(0)
+  status         FlowStatus   @default(PROCESSING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    String
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User             @relation("FlowCreator", fields: [createdById], references: [id])
+  nodes           FlowNode[]
+  edges           FlowEdge[]
+  versions        FlowVersion[]
+  diffs           FlowDiff[]
+  simulations     SimulationRun[]
+  exports         ExportRecord[]
+  sharedEmbeds    SharedEmbed[]
+  confluenceSyncs ConfluenceSync[]
+
+  @@index([workspaceId])
+  @@index([createdById])
+}
+
+// ─── Flow Node ───────────────────────────────────────────────
+model FlowNode {
+  id        String       @id @default(cuid())
+  flowId    String
+  nodeId    String
+  type      FlowNodeType
+  label     String
+  metadata  Json         @default("{}")
+  positionX Float        @default(0)
+  positionY Float        @default(0)
+
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@unique([flowId, nodeId])
+  @@index([flowId])
+}
+
+// ─── Flow Edge ───────────────────────────────────────────────
+model FlowEdge {
+  id           String  @id @default(cuid())
+  flowId       String
+  sourceNodeId String
+  targetNodeId String
+  label        String  @default("")
+  condition    String?
+
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+}
+
+// ─── NextAuth: Account ───────────────────────────────────────
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// ─── NextAuth: Session ───────────────────────────────────────
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── NextAuth: Verification Token ────────────────────────────
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Phase 3: Versioning & Simulation ────────────────────────
+
+model FlowVersion {
+  id             String   @id @default(cuid())
+  flowId         String
+  versionNumber  Int
+  label          String?
+  rawFileUrl     String
+  normalizedJson Json
+  nodeCount      Int
+  edgeCount      Int
+  importedById   String
+  importedAt     DateTime @default(now())
+  isActive       Boolean  @default(false)
+
+  flow         Flow           @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  importedBy   User           @relation(fields: [importedById], references: [id])
+  diffsFrom    FlowDiff[]     @relation("FromVersion")
+  diffsTo      FlowDiff[]     @relation("ToVersion")
+  simulations  SimulationRun[]
+  exports      ExportRecord[]
+  sharedEmbeds SharedEmbed[]
+
+  @@unique([flowId, versionNumber])
+  @@index([flowId])
+}
+
+model FlowDiff {
+  id            String   @id @default(cuid())
+  flowId        String
+  fromVersionId String
+  toVersionId   String
+  diffJson      Json
+  addedNodes    Int
+  removedNodes  Int
+  modifiedNodes Int
+  addedEdges    Int
+  removedEdges  Int
+  computedAt    DateTime @default(now())
+
+  flow        Flow        @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  fromVersion FlowVersion @relation("FromVersion", fields: [fromVersionId], references: [id], onDelete: Cascade)
+  toVersion   FlowVersion @relation("ToVersion", fields: [toVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([fromVersionId, toVersionId])
+  @@index([flowId])
+}
+
+enum SimulationOutcome {
+  REACHED_QUEUE
+  HANGUP
+  DEAD_END
+  LOOP_DETECTED
+  ERROR
+}
+
+model SimulationRun {
+  id              String            @id @default(cuid())
+  flowId          String
+  versionId       String
+  runById         String
+  inputDnis       String?
+  inputTime       String?
+  inputCallerType String?
+  resultPath      Json
+  resultOutcome   SimulationOutcome
+  totalSteps      Int
+  flaggedIssues   Json
+  createdAt       DateTime          @default(now())
+
+  flow    Flow        @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  version FlowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  runBy   User        @relation(fields: [runById], references: [id])
+
+  @@index([flowId])
+  @@index([versionId])
+}
+
+// ─── Phase 4: Usage / Billing / Export / Confluence ──────────
+
+model UsageRecord {
+  id          String      @id @default(cuid())
+  workspaceId String
+  metric      UsageMetric
+  value       Int         @default(0)
+  updatedAt   DateTime    @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, metric])
+  @@index([workspaceId])
+}
+
+model ConfluenceSync {
+  id                 String     @id @default(cuid())
+  flowId             String
+  workspaceId        String
+  confluencePageId   String?
+  confluenceSpaceKey String
+  confluenceSiteUrl  String
+  lastSyncedAt       DateTime?
+  lastSyncStatus     SyncStatus @default(PENDING)
+  lastSyncError      String?
+  autoSync           Boolean    @default(false)
+  createdById        String
+  createdAt          DateTime   @default(now())
+
+  flow      Flow      @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@unique([flowId, workspaceId])
+  @@index([flowId])
+  @@index([workspaceId])
+}
+
+model ExportRecord {
+  id         String       @id @default(cuid())
+  flowId     String
+  versionId  String
+  exportedBy String
+  format     ExportFormat
+  fileUrl    String
+  createdAt  DateTime     @default(now())
+
+  flow       Flow        @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  version    FlowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  exportedByUser User    @relation(fields: [exportedBy], references: [id])
+
+  @@index([flowId])
+}
+
+model SharedEmbed {
+  id        String    @id @default(cuid())
+  flowId    String
+  versionId String
+  token     String    @unique
+  createdBy String
+  expiresAt DateTime?
+  viewCount Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  flow       Flow        @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  version    FlowVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdByUser User     @relation(fields: [createdBy], references: [id])
+
+  @@index([flowId])
+  @@index([token])
+}
+
+// ─── Phase 4 Stub: SAML SSO Config (ENTERPRISE) ─────────────
+model SamlConfig {
+  id            String   @id @default(cuid())
+  workspaceId   String   @unique
+  entityId      String
+  ssoUrl        String
+  certificate   String   @db.Text
+  isEnabled     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
