@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 const PLATFORMS = [
   { value: "AMAZON_CONNECT", label: "Amazon Connect", ext: ".json" },
   { value: "CISCO_UCCX", label: "Cisco UCCX", ext: ".xml" },
-  { value: "GENESYS", label: "Genesys Cloud", ext: ".json" },
+  { value: "GENESYS", label: "Genesys Cloud", ext: ".i3InboundFlow" },
 ];
 
 interface Props {
@@ -134,7 +134,7 @@ export function UploadFlowModal({ open, onClose }: Props) {
                 <UploadCloud className={`mb-3 h-10 w-10 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
                 <p className="text-sm font-medium text-foreground">Drag & drop your file here</p>
                 <p className="mt-1 text-xs text-muted-foreground">or click to browse · Max 10MB</p>
-                <input ref={fileInputRef} type="file" accept=".json,.xml,.aef" className="hidden" onChange={(e) => handleFileSelect(e.target.files)} />
+                <input ref={fileInputRef} type="file" accept=".json,.xml,.aef,.i3InboundFlow,.I3INBOUNDFLOW" className="hidden" onChange={(e) => handleFileSelect(e.target.files)} />
               </div>
               <Button variant="ghost" size="sm" onClick={() => setStep("platform")}>← Back</Button>
             </div>

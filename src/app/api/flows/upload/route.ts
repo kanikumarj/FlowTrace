@@ -6,7 +6,7 @@ import { parseFlow } from "@/lib/parsers";
 import type { Platform } from "@/lib/parsers/types";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const VALID_EXTENSIONS = ["json", "xml", "aef"];
+const VALID_EXTENSIONS = ["json", "xml", "aef", "i3inboundflow"];
 const VALID_PLATFORMS: Platform[] = ["AMAZON_CONNECT", "CISCO_UCCX", "GENESYS"];
 
 export async function POST(request: Request) {
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     if (!VALID_EXTENSIONS.includes(ext)) {
-      return NextResponse.json({ success: false, error: { code: "INVALID_TYPE", message: "Only .json and .xml files are supported" } }, { status: 400 });
+      return NextResponse.json({ success: false, error: { code: "INVALID_TYPE", message: "Only .json, .xml, .aef, and .i3InboundFlow files are supported" } }, { status: 400 });
     }
 
     // ─── Create Flow record (PROCESSING) ───────────────────────

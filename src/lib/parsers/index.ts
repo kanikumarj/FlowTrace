@@ -15,6 +15,7 @@ export function detectPlatform(fileName: string): Platform | null {
   const ext = fileName.split(".").pop()?.toLowerCase();
   if (ext === "xml" || ext === "aef") return "CISCO_UCCX";
   if (ext === "json") return "AMAZON_CONNECT"; // Default JSON → Amazon Connect
+  if (ext === "i3inboundflow") return "GENESYS";
   return null;
 }
 
