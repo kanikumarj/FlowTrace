@@ -77,4 +77,21 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  events: {
+    async createUser({ user }) {
+      // Automatically provision a default workspace for users signing up via OAuth
+      await prisma.workspace.create({
+        data: {
+          name: `${user.name || "My"}'s Workspace`,
+          ownerId: user.id,
+          members: {
+            create: {
+              userId: user.id,
+              role: "ADMIN",
+            },
+          },
+        },
+      });
+    },
+  },
 };

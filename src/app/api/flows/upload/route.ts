@@ -17,12 +17,26 @@ export async function POST(request: Request) {
     }
 
     // Get user's workspace
-    const membership = await prisma.workspaceMember.findFirst({
+    let membership = await prisma.workspaceMember.findFirst({
       where: { userId: session.user.id },
       select: { workspaceId: true },
     });
+
     if (!membership) {
-      return NextResponse.json({ success: false, error: { code: "NO_WORKSPACE", message: "No workspace found" } }, { status: 400 });
+      // Auto-provision a workspace if the user doesn't have one
+      const workspace = await prisma.workspace.create({
+        data: {
+          name: `${session.user.name || "My"}'s Workspace`,
+          ownerId: session.user.id,
+          members: {
+            create: {
+              userId: session.user.id,
+              role: "ADMIN",
+            },
+          },
+        },
+      });
+      membership = { workspaceId: workspace.id };
     }
 
     const formData = await request.formData();
