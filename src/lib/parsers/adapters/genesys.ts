@@ -20,8 +20,8 @@ export class GenesysAdapter implements ParserAdapter {
       };
 
       const normalizedFlow: NormalizedFlow = {
-        id: flowId,
-        name: flowName,
+        flowId: flowId,
+        flowName: flowName,
         platform: "GENESYS",
         nodes: [startNode],
         edges: []
