@@ -223,7 +223,41 @@ function parseStep(
 
 export class GenesysAdapter implements ParserAdapter {
   async parse(fileContent: string, flowName: string, flowId: string): Promise<ParseResult> {
-    // ── Stage 1: XML → JS object ──────────────────────────────────────────────
+    // ── Pre-Stage: Detect format (JSON vs XML) ──────────────────────────────
+    let isJson = false;
+    let rawJson: any = null;
+    try {
+      rawJson = JSON.parse(fileContent.trim());
+      isJson = true;
+    } catch {
+      // Not JSON, assume XML
+    }
+
+    if (isJson) {
+      // Basic stub for Genesys Cloud parsing to unblock file ingestion
+      const startNode: NormalizedNode = {
+        id: "start-node",
+        type: "START",
+        label: "Genesys Cloud Flow Start",
+        metadata: { info: "Genesys Cloud parsing engine under development", rawData: rawJson }
+      };
+
+      const normalizedFlow: NormalizedFlow = {
+        flowId,
+        platform: "GENESYS",
+        flowName: flowName ?? "Genesys Cloud Flow",
+        nodes: [startNode],
+        edges: []
+      };
+
+      return {
+        success: true,
+        data: normalizedFlow,
+        error: null,
+      };
+    }
+
+    // ── Stage 1: XML → JS object (Genesys PureConnect) ──────────────────────
     let parsed: Record<string, unknown>;
     try {
       parsed = await parseStringPromise(fileContent, {
@@ -236,7 +270,7 @@ export class GenesysAdapter implements ParserAdapter {
       return {
         success: false,
         data: null,
-        error: `File format not recognized: ${String(err)}`,
+        error: `File format not recognized as JSON or XML: ${String(err)}`,
       };
     }
 
