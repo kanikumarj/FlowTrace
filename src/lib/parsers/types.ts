@@ -48,5 +48,5 @@ export type Platform = "AMAZON_CONNECT" | "CISCO_UCCX" | "GENESYS";
 
 // ─── Parser Adapter Interface ────────────────────────────────
 export interface ParserAdapter {
-  parse(fileContent: string, flowName: string, flowId: string): ParseResult;
+  parse(fileContent: string, flowName: string, flowId: string): ParseResult | Promise<ParseResult>;
 }

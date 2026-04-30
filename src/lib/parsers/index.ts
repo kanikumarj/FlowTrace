@@ -20,12 +20,12 @@ export function detectPlatform(fileName: string): Platform | null {
 }
 
 /** Main parser factory — routes to correct adapter, validates output */
-export function parseFlow(
+export async function parseFlow(
   fileContent: string,
   platform: Platform,
   flowName: string,
   flowId: string
-): ParseResult {
+): Promise<ParseResult> {
   const adapter = adapters[platform];
   if (!adapter) {
     return {
@@ -36,7 +36,7 @@ export function parseFlow(
   }
 
   // Run platform-specific parser
-  const parseResult = adapter.parse(fileContent, flowName, flowId);
+  const parseResult = await adapter.parse(fileContent, flowName, flowId);
   if (!parseResult.success || !parseResult.data) {
     return parseResult;
   }

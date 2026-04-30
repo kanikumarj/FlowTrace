@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     // ─── Parse file ────────────────────────────────────────────
     const fileContent = await file.text();
-    const result = parseFlow(fileContent, platform as Platform, flowName.trim(), flow.id);
+    const result = await parseFlow(fileContent, platform as Platform, flowName.trim(), flow.id);
 
     if (!result.success || !result.data) {
       await prisma.flow.update({
